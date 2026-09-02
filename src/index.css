@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@config "../tailwind.config.js";
+
+@theme {
+  --font-sans: 'Inter', 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --color-primary: #3461FD;
+  --color-primary-soft: #EBF2FE;
+  --color-background: #F6F8FC;
+  --color-text-main: #1E2538;
+  --color-text-muted: #8C96A8;
+  --shadow-glass: 0 8px 24px rgba(47, 84, 235, 0.06);
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-background, #F6F8FC);
+  color: var(--color-text-main, #1E2538);
+}
