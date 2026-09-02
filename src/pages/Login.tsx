@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
-import { Boxes, Eye, EyeOff } from 'lucide-react'
-import { useMediaQuery } from 'react-responsive'
+import { Boxes, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react'
+import bgImage from '../assets/background-image-nibm.jpg'
+import { useAuth } from '../context/AuthContext'
+import axios from 'axios'
 
 interface LoginProps {
   onLogin?: (credentials: { usernameOrEmail: string; password: string; rememberMe: boolean }) => void
@@ -9,51 +11,81 @@ interface LoginProps {
 export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [usernameOrEmail, setUsernameOrEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [rememberMe, setRememberMe] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  // Detect mobile viewport using react-responsive (matching Tailwind's 'sm' breakpoint of 640px)
-  const isMobile = useMediaQuery({ maxWidth: 639 })
+  const { login } = useAuth()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (onLogin) {
-      onLogin({ usernameOrEmail, password, rememberMe })
-    } else {
-      console.log('Login submitted:', { usernameOrEmail, password, rememberMe })
+    setErrorMessage(null)
+    setIsSubmitting(true)
+
+    try {
+      await login({ usernameOrEmail, password })
+      if (onLogin) {
+        onLogin({ usernameOrEmail, password, rememberMe: false })
+      }
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        const msg = err.response?.data?.message || err.response?.data?.error || 'Failed to sign in. Please verify your credentials.'
+        // ADD THIS LINE to see the actual underlying error in your browser console (F12)
+        console.error("Axios Error Details:", err.message, err.response?.data);
+        setErrorMessage(msg)
+      } else if (err instanceof Error) {
+        setErrorMessage(err.message)
+      } else {
+        setErrorMessage('An unexpected error occurred. Please try again.')
+      }
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   return (
-    <div className="min-h-screen w-full bg-background flex items-center justify-center p-0">
-      {/* Authentication Card */}
-      <div className="w-full mx-6 p-6 sm:w-[420px] sm:mx-0 sm:p-[40px] rounded-[16px] bg-white/85 backdrop-blur-md border border-white/60 shadow-glass flex flex-col gap-6">
+    <div className="relative min-h-screen w-full overflow-hidden flex items-center justify-center p-4 sm:p-6">
+      
+      {/* Background layer with subtle blur */}
+      <div 
+        className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat blur-[3px] scale-105"
+        style={{ backgroundImage: `url(${bgImage})` }}
+      />
+
+      {/* Reusable Liquid Glass Authentication Card */}
+      <div className="glass-panel relative z-10 w-full mx-2 p-6 sm:w-[440px] sm:mx-0 sm:p-[42px] flex flex-col gap-6">
         
-        {/* 1. Brand Logo */}
-        <div className="flex items-center justify-center gap-2.5">
-          <Boxes className="w-7 h-7 text-primary stroke-[2.2]" />
-          <span className="text-xl font-bold tracking-tight text-text-main">
-            LabStructor
+        {/* Specular liquid reflection highlight overlay */}
+        <div className="glass-shine" />
+
+        {/* Subtle internal glowing flare */}
+        <div className="glass-flare" />
+
+        {/* 1. Brand Logo & Header */}
+        <div className="relative z-10 flex items-center justify-center gap-3 p-10">
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[#6552D2] to-[#8675EC] flex items-center justify-center shadow-md shadow-[#6552D2]/30 text-white">
+            <Boxes className="w-6 h-6 stroke-[2.2]" />
+          </div>
+          <span className="text-4xl font-bold tracking-tight text-text-main">
+            Lab<span className="text-[#6552D2]">Structor</span>
           </span>
         </div>
 
-        {/* 2. Heading Section */}
-        <div className="text-center flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold text-text-main">
-            Sign In
-          </h1>
-          <p className="text-sm text-text-muted">
-            Enter your university credentials to continue
-          </p>
-        </div>
+        {/* Error notification banner */}
+        {errorMessage && (
+          <div className="relative z-10 glass-alert-error flex items-start gap-2.5">
+            <AlertCircle className="w-5 h-5 flex-shrink-0 text-red-600 mt-0.5" />
+            <span className="text-sm text-red-800 font-medium">{errorMessage}</span>
+          </div>
+        )}
 
         {/* 3. Form */}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+        <form onSubmit={handleSubmit} className="relative z-10 flex flex-col gap-5">
           {/* Field 1: Username or Email */}
           <div className="flex flex-col gap-1.5">
-            <label 
-              htmlFor="usernameOrEmail" 
-              className="text-xs font-medium text-text-main uppercase tracking-wider"
+            <label
+              htmlFor="usernameOrEmail"
+              className="text-xs font-semibold text-text-main/80 uppercase tracking-wider"
             >
               Username or Email
             </label>
@@ -61,18 +93,19 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
               id="usernameOrEmail"
               type="text"
               required
+              disabled={isSubmitting}
               value={usernameOrEmail}
               onChange={(e) => setUsernameOrEmail(e.target.value)}
               placeholder="instructor_jane or john@university.edu"
-              className="w-full h-[50px] sm:h-[48px] px-4 bg-white border border-gray-200 rounded-[12px] text-text-main placeholder:text-text-muted text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              className="glass-input h-[50px] sm:h-[48px] px-4"
             />
           </div>
 
           {/* Field 2: Password with Eye toggle */}
           <div className="flex flex-col gap-1.5">
-            <label 
-              htmlFor="password" 
-              className="text-xs font-medium text-text-main uppercase tracking-wider"
+            <label
+              htmlFor="password"
+              className="text-xs font-semibold text-text-main/80 uppercase tracking-wider"
             >
               Password
             </label>
@@ -81,15 +114,16 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 id="password"
                 type={showPassword ? 'text' : 'password'}
                 required
+                disabled={isSubmitting}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
-                className="w-full h-[50px] sm:h-[48px] pl-4 pr-11 bg-white border border-gray-200 rounded-[12px] text-text-main placeholder:text-text-muted text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                className="glass-input h-[50px] sm:h-[48px] pl-4 pr-11"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-main transition-colors p-1"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-[#6552D2] transition-colors p-1 cursor-pointer"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? (
@@ -101,43 +135,22 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </div>
           </div>
 
-          {/* 4. Utility Row */}
-          <div className="flex items-center justify-between text-sm pt-0.5">
-            <label className="flex items-center gap-2 text-text-muted cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary/30 accent-primary cursor-pointer"
-              />
-              <span className="text-sm">Remember me</span>
-            </label>
-
-            <a
-              href="#forgot-password"
-              className="text-sm text-primary hover:underline font-medium"
-            >
-              Forgot password?
-            </a>
-          </div>
-
-          {/* 5. Primary Action Button */}
+          {/* 5. Primary Action Button with Loading Spinner */}
           <button
             type="submit"
-            className="w-full h-[50px] sm:h-[48px] bg-primary text-white font-bold text-sm rounded-[12px] shadow-sm hover:bg-primary/90 active:scale-[0.99] transition-all flex items-center justify-center cursor-pointer mt-1"
+            disabled={isSubmitting}
+            className="w-full h-[50px] sm:h-[48px] bg-[#6552D2] hover:bg-[#5442BE] disabled:opacity-75 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-[14px] shadow-lg shadow-[#6552D2]/25 hover:shadow-xl hover:shadow-[#6552D2]/35 active:scale-[0.99] transition-all flex items-center justify-center cursor-pointer my-10 gap-2"
           >
-            Sign In
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Signing in...</span>
+              </>
+            ) : (
+              'Sign In'
+            )}
           </button>
         </form>
-
-        {/* 6. Subtext / Footer */}
-        <div className="pt-2 text-center">
-          <p className="text-xs text-text-muted">
-            {isMobile
-              ? 'LabStructor System • University Portal'
-              : 'Access restricted to authorized Admin, Instructor, and Staff accounts.'}
-          </p>
-        </div>
 
       </div>
     </div>
