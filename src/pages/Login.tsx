@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Boxes, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react'
 import bgImage from '../assets/background-image-nibm.jpg'
 import { useAuth } from '../context/AuthContext'
@@ -16,6 +17,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const { login } = useAuth()
+  const navigate = useNavigate()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -27,6 +29,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       if (onLogin) {
         onLogin({ usernameOrEmail, password, rememberMe: false })
       }
+      navigate('/dashboard')
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         const msg = err.response?.data?.message || err.response?.data?.error || 'Failed to sign in. Please verify your credentials.'
